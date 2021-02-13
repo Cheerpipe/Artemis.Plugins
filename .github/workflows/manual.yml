@@ -1,0 +1,118 @@
+name: Build Plugins Manual
+
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Build Plugins Manual'
+        default: 'Build Plugins Manual'
+        required: true
+
+jobs:
+  build:
+    runs-on: [windows-latest]
+
+    steps:
+      - name: Setup .NET 5.0
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '5.0.100'
+
+      - name: Clone RGB.NET
+        uses: actions/checkout@v2
+        with:
+          repository: DarthAffe/RGB.NET
+          path: RGB.NET
+          ref: 81ad871f942fddbc57b49e4c215b02530e4be472
+
+      - name: Build RGB.NET
+        run: dotnet build .\RGB.NET\RGB.NET.Core\RGB.NET.Core.csproj
+        
+      - run: dotnet build .\RGB.NET\RGB.NET.Groups\RGB.NET.Groups.csproj
+      
+      - run: dotnet build .\RGB.NET\RGB.NET.Brushes\RGB.NET.Brushes.csproj
+
+      - name: Clone Artemis
+        uses: actions/checkout@v2
+        with:
+          repository: Artemis-RGB/Artemis
+          path: Artemis
+
+      - name: Build Artemis
+        run: dotnet build .\Artemis\src\Artemis.sln
+
+      - name: Clone Plugins
+        uses: actions/checkout@v2
+        with:
+          path: Plugins
+
+      - name: Build Plugins
+        run: dotnet publish -c Release .\Plugins\src\Artemis.Plugins.sln
+
+        #msbuild is dumb so we have to upload one at a time :)
+        #https://github.com/dotnet/sdk/issues/7238
+      - name: Upload League of Legends
+        uses: actions/upload-artifact@v2
+        with:
+          name: Artemis.Plugins.Modules.LeagueOfLegends
+          path: .\Plugins\src\Artemis.Plugins.Modules.LeagueOfLegends\bin\x64\Release\net5.0-windows\publish
+
+      - name: Upload HardwareMonitor
+        uses: actions/upload-artifact@v2
+        with:
+          name: Artemis.Plugins.DataModelExpansions.HardwareMonitor
+          path: .\Plugins\src\Artemis.Plugins.DataModelExpansions.HardwareMonitor\bin\x64\Release\net5.0-windows\publish
+
+      - name: Upload Gif
+        uses: actions/upload-artifact@v2
+        with:
+          name: Artemis.Plugins.LayerBrushes.Gif
+          path: .\Plugins\src\Artemis.Plugins.LayerBrushes.Gif\bin\x64\Release\net5.0-windows\publish
+
+      - name: Upload Chroma
+        uses: actions/upload-artifact@v2
+        with:
+          name: Artemis.Plugins.LayerBrushes.Chroma
+          path: .\Plugins\src\Artemis.Plugins.LayerBrushes.Chroma\bin\x64\Release\net5.0-windows\publish
+
+      - name: Upload Particle
+        uses: actions/upload-artifact@v2
+        with:
+          name: Artemis.Plugins.LayerBrushes.Particle
+          path: .\Plugins\src\Artemis.Plugins.LayerBrushes.Particle\bin\x64\Release\net5.0-windows\publish
+
+      - name: Upload Spotify
+        uses: actions/upload-artifact@v2
+        with:
+          name: Artemis.Plugins.DataModelExpansions.Spotify
+          path: .\Plugins\src\Artemis.Plugins.DataModelExpansions.Spotify\bin\x64\Release\net5.0-windows\publish
+
+      - name: Upload OBS
+        uses: actions/upload-artifact@v2
+        with:
+          name: Artemis.Plugins.DataModelExpansions.OBS
+          path: .\Plugins\src\Artemis.Plugins.DataModelExpansions.OBS\bin\x64\Release\net5.0-windows\publish
+
+      - name: Upload Fallout 4
+        uses: actions/upload-artifact@v2
+        with:
+          name: Artemis.Plugins.Modules.Fallout4
+          path: .\Plugins\src\Artemis.Plugins.Modules.Fallout4\bin\x64\Release\net5.0-windows\publish
+
+      - name: Upload Standalone Hardware Monitor
+        uses: actions/upload-artifact@v2
+        with:
+          name: Artemis.Plugins.DataModelExpansions.StandaloneHardwareMonitor
+          path: .\Plugins\src\Artemis.Plugins.DataModelExpansions.StandaloneHardwareMonitor\bin\x64\Release\net5.0-windows\publish
+
+      - name: Upload Discord
+        uses: actions/upload-artifact@v2
+        with:
+          name: Artemis.Plugins.DataModelExpansions.Discord
+          path: .\Plugins\src\Artemis.Plugins.DataModelExpansions.Discord\bin\x64\Release\net5.0-windows\publish
+
+      - name: Upload Ambilight
+        uses: actions/upload-artifact@v2
+        with:
+          name: Artemis.Plugins.LayerBrushes.Ambilight
+          path: .\Plugins\src\Artemis.Plugins.LayerBrushes.Ambilight\bin\x64\Release\net5.0-windows\publish
