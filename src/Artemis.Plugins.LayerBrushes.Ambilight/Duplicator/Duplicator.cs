@@ -19,7 +19,7 @@ namespace Artemis.Plugins.LayerBrushes.Ambilight
         private ID3D11Texture2D _stagingTexture;
 
         public ID3D11Device Device { get => _device; }
-        private  ID3D11Device _device;
+        private ID3D11Device _device;
 
         public ID3D11Texture2D SmallerTexture { get => _smallerTexture; }
         private ID3D11Texture2D _smallerTexture;
@@ -27,15 +27,9 @@ namespace Artemis.Plugins.LayerBrushes.Ambilight
         public ID3D11ShaderResourceView SmallerTextureView { get => _smallerTextureView; }
         private ID3D11ShaderResourceView _smallerTextureView;
 
-        public Duplicator(int adapterId, int outputId)
+        public Duplicator(int adapterId, int outputId, ID3D11Device device, IDXGIOutput1 output1)
         {
-
-            var adapter = factory.GetAdapter1(adapterId);
-            D3D11.D3D11CreateDevice(adapter, DriverType.Unknown, DeviceCreationFlags.Debug, DuplicatorFactory.s_featureLevels, out _device);
-
-            var output = adapter.GetOutput(outputId);
-            var output1 = output.QueryInterface<IDXGIOutput5>();
-
+            _device = device;
             var bounds = output1.Description.DesktopCoordinates;
             var width = bounds.Right - bounds.Left;
             var height = bounds.Bottom - bounds.Top;
@@ -75,15 +69,18 @@ namespace Artemis.Plugins.LayerBrushes.Ambilight
             Thread.Sleep(500);
         }
 
+        public void Close()
+        {
+            _duplication?.Release();
+            Thread.Sleep(500);
+        }
+
         public void Dispose()
         {
-            /*
-            device?.Dispose();
-            stagingTexture?.Dispose();
-            smallerTexture?.Dispose();
-            smallerTextureView?.Dispose();
-            duplication.Dispose();
-            */
+            _stagingTexture?.Dispose();
+            _smallerTexture?.Dispose();
+            _smallerTextureView?.Dispose();
+            //_duplication.Dispose(); //Check if it can be disposable before dispose
         }
     }
 }

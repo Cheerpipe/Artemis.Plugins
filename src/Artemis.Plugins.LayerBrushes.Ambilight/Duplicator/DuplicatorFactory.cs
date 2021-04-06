@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading;
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
@@ -10,7 +12,8 @@ namespace Artemis.Plugins.LayerBrushes.Ambilight
     public static class DuplicatorFactory
     {
         private const int DEFAULT_ADAPTER_ID = 0; //Should be always 0
-        private static Dictionary<int, Duplicator> duplications;
+        private static Dictionary<int, Duplicator> _duplications = new();
+        private static IDXGIFactory1 _factory = DXGI.CreateDXGIFactory1<IDXGIFactory1>();
 
         static DuplicatorFactory()
         {
@@ -19,70 +22,76 @@ namespace Artemis.Plugins.LayerBrushes.Ambilight
 
         public static readonly FeatureLevel[] s_featureLevels = new[]
         {
+            FeatureLevel.Level_11_1,
             FeatureLevel.Level_11_0,
-            FeatureLevel.Level_10_1,
-            FeatureLevel.Level_10_0,
-            FeatureLevel.Level_9_3,
-            FeatureLevel.Level_9_2,
-            FeatureLevel.Level_9_1,
         };
 
-        public static List<IDXGIOutput> GetDeviceOutputs()
+        public static int GetOutputsCount()
         {
-            /*
-            IDXGIFactory1 factory = DXGI.CreateDXGIFactory1<IDXGIFactory1>();
-            ID3D11Device device;
-            IDXGIAdapter adapter = factory.GetAdapter1(DEFAULT_ADAPTER_ID);
-            D3D11.D3D11CreateDevice(adapter, DriverType.Unknown, DeviceCreationFlags.Debug, s_featureLevels, out device);
+            var  factory = DXGI.CreateDXGIFactory1<IDXGIFactory1>();
+            var adapter = factory.GetAdapter1(DEFAULT_ADAPTER_ID); //Adapter should be always 0
             int i = 0;
             IDXGIOutput output;
-            List<IDXGIOutput> outputs = new();
             while (adapter.EnumOutputs(i, out output) != Vortice.DXGI.ResultCode.NotFound)
             {
-                outputs.Add(output);
+                output.Release();
                 ++i;
             }
-            factory.Dispose();
-            device.Dispose
-            return outputs;
-            */
-            return null;
+            adapter.Release();
+            factory.Release();
+            return i;
         }
         public static Duplicator GetDuplicator(int outputId)
         {
-            if (outputId > duplications.Count)
+            if (!_duplications.ContainsKey(outputId))
                 return null;
-            return duplications[outputId];
+            return _duplications.GetValueOrDefault(outputId);
         }
 
-        public static bool RePopulateDuplicator(int outputId)
+        public static bool DuplicationExists(int outputId)
         {
-            try
-            {
-                duplications[outputId] = new Duplicator(0, outputId);
-                return true;
-            }
-            catch (Exception e)
-            {
+
+            if (!_duplications.ContainsKey(outputId))
                 return false;
-                //TODO: LOG
-            }
+
+            if (_duplications[outputId].Duplication.NativePointer == IntPtr.Zero)
+                return false;
+
+            if (_duplications[outputId].Duplication.IsDisposed)
+                return false;
+            return true;
         }
 
         public static int PopulateDuplicators()
         {
-           // var outputs = GetDeviceOutputs();
-            int populatedDuplicatorsCount = 0;
+            Thread.Sleep(TimeSpan.FromMilliseconds(500)); //Wait until outputs refreshs
+            var outputsCount = GetOutputsCount();
+            var factory = DXGI.CreateDXGIFactory1<IDXGIFactory1>();
+            var adapter = factory.GetAdapter1(DEFAULT_ADAPTER_ID); //Adapter should be always 0
+            ID3D11Device device;
+            D3D11.D3D11CreateDevice(adapter, DriverType.Unknown, DeviceCreationFlags.Debug, s_featureLevels, out device);
+            //TODO: First, clear existing duplicators to free up API Calls (4 max windows globally)
+            for (int i = 0; i < _duplications.Count; i++)
+            {
+                _duplications[i].Close();
+                _duplications[i].Dispose();
+            }
+            
+            _duplications.Clear();
 
-            duplications = new();
-            //TODO: Handle existing and working duplicators. Populate only those that are invalid
-            for (int i = 0; i <  1/*outputs.Count*/; i++)
+            int populatedDuplicatorsCount = 0;
+            Debug.WriteLine(outputsCount);
+            for (int i = 0; i < outputsCount; i++)
             {
                 try
                 {
-                    duplications.Add(
+                    //Try create duplicator. It will fail if a display mode change takes too much time and outputs are not ready to be duplicated so we will have to retry some time but not forever
+                    //In my case, when go from Secondary to Extended, my GSync monitor take sarround 5/8 seconds to be ready to init a capture
+                    var output = adapter.GetOutput(i);
+                    var output1 = output.QueryInterface<IDXGIOutput1>();
+                    _duplications.Add(
                         i,
-                        new Duplicator(0, i)
+                        new Duplicator(0, i, device, output1)
                         );
                     populatedDuplicatorsCount++;
                 }

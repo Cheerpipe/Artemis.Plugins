@@ -4,6 +4,7 @@ using Artemis.Plugins.LayerBrushes.Ambilight.PropertyGroups;
 using SkiaSharp;
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
 
@@ -19,7 +20,7 @@ namespace Artemis.Plugins.LayerBrushes.Ambilight
 
         public override void EnableLayerBrush()
         {
-            duplicator = DuplicatorFactory.GetDuplicator(Properties.Output.BaseValue);
+
         }
 
         public override void DisableLayerBrush()
@@ -30,36 +31,37 @@ namespace Artemis.Plugins.LayerBrushes.Ambilight
 
         public override void Update(double deltaTime)
         {
+            GetNextFrame();
+        }
+
+        public async Task GetNextFrame()
+        {
+            duplicator = DuplicatorFactory.GetDuplicator(Properties.Output.BaseValue);
+
+            if (duplicator == null)
+                return;
+
             IDXGIResource screenResource;
             OutduplFrameInfo frameInfo;
 
             try
             {
-                duplicator.Duplication.AcquireNextFrame(-1, out frameInfo, out screenResource);
-
+                duplicator.Duplication.AcquireNextFrame(1, out frameInfo, out screenResource);
                 using (var tempTexture = screenResource.QueryInterface<ID3D11Texture2D>())
                     duplicator.Device.ImmediateContext.CopySubresourceRegion(duplicator.SmallerTexture, 0, 0, 0, 0, tempTexture, 0);
-
                 duplicator.Device.ImmediateContext.GenerateMips(duplicator.SmallerTextureView);
                 duplicator.Device.ImmediateContext.CopySubresourceRegion(duplicator.StagingTexture, 0, 0, 0, 0, duplicator.SmallerTexture, 1);
-
                 var dataBox = duplicator.Device.ImmediateContext.Map(duplicator.StagingTexture, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
-
                 ProcessDataIntoSKPixmap(dataBox);
-
                 duplicator.Device.ImmediateContext.Unmap(duplicator.StagingTexture, 0);
-
                 screenResource.Dispose();
                 duplicator.Duplication.ReleaseFrame();
-
             }
             catch (SharpGen.Runtime.SharpGenException e)
             {
-
                 if (e.ResultCode == Vortice.DXGI.ResultCode.AccessLost)
                 {
-                    DuplicatorFactory.RePopulateDuplicator(Properties.Output.BaseValue);
-                    duplicator = DuplicatorFactory.GetDuplicator(Properties.Output.BaseValue);
+                    DuplicatorFactory.PopulateDuplicators();
                 }
                 else if (e.ResultCode == Vortice.DXGI.ResultCode.WaitTimeout)
                 {
@@ -67,14 +69,16 @@ namespace Artemis.Plugins.LayerBrushes.Ambilight
                 }
                 else if (e.ResultCode == Vortice.DXGI.ResultCode.InvalidCall)
                 {
-
+                    throw;
                 }
                 else
                 {
-
+                    throw;
                 }
+            }
+            finally
+            {
 
-                throw;
             }
         }
 
@@ -99,6 +103,9 @@ namespace Artemis.Plugins.LayerBrushes.Ambilight
 
         public override SKColor GetColor(ArtemisLed led, SKPoint renderPoint)
         {
+            if (duplicator == null)
+                return SKColors.Transparent;
+
             const int sampleSize = 9;
             const int sampleDepth = 3;
 
