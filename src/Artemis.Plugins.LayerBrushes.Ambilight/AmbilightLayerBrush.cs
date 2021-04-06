@@ -54,7 +54,7 @@ namespace Artemis.Plugins.LayerBrushes.Ambilight
                 ProcessDataIntoSKPixmap(dataBox);
                 duplicator.Device.ImmediateContext.Unmap(duplicator.StagingTexture, 0);
                 screenResource.Dispose();
-                duplicator.Duplication.ReleaseFrame();
+
             }
             catch (SharpGen.Runtime.SharpGenException e)
             {
@@ -77,7 +77,7 @@ namespace Artemis.Plugins.LayerBrushes.Ambilight
             }
             finally
             {
-
+                duplicator.Duplication.ReleaseFrame();
             }
         }
 
@@ -102,6 +102,8 @@ namespace Artemis.Plugins.LayerBrushes.Ambilight
 
         public override SKColor GetColor(ArtemisLed led, SKPoint renderPoint)
         {
+            //Or there is not an duplicator available or it fails to run and pixmap is null.
+            //TODO: Log
             if (duplicator == null || pixmap == null)
                 return SKColors.Transparent;
 
