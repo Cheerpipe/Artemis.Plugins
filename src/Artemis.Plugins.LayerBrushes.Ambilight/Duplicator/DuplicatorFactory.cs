@@ -28,7 +28,7 @@ namespace Artemis.Plugins.LayerBrushes.Ambilight
 
         public static int GetOutputsCount()
         {
-            var  factory = DXGI.CreateDXGIFactory1<IDXGIFactory1>();
+            var factory = DXGI.CreateDXGIFactory1<IDXGIFactory1>();
             var adapter = factory.GetAdapter1(DEFAULT_ADAPTER_ID); //Adapter should be always 0
             int i = 0;
             IDXGIOutput output;
@@ -76,28 +76,35 @@ namespace Artemis.Plugins.LayerBrushes.Ambilight
                 _duplications[i].Close();
                 _duplications[i].Dispose();
             }
-            
+
             _duplications.Clear();
 
             int populatedDuplicatorsCount = 0;
-            Debug.WriteLine(outputsCount);
+
             for (int i = 0; i < outputsCount; i++)
             {
-                try
+                int retryCount = 0;
+                while (retryCount < 10)
                 {
-                    //Try create duplicator. It will fail if a display mode change takes too much time and outputs are not ready to be duplicated so we will have to retry some time but not forever
-                    //In my case, when go from Secondary to Extended, my GSync monitor take sarround 5/8 seconds to be ready to init a capture
-                    var output = adapter.GetOutput(i);
-                    var output1 = output.QueryInterface<IDXGIOutput1>();
-                    _duplications.Add(
-                        i,
-                        new Duplicator(0, i, device, output1)
-                        );
-                    populatedDuplicatorsCount++;
-                }
-                catch
-                {
-                    //LOG
+                    try
+                    {
+                        //Try create duplicator. It will fail if a display mode change takes too much time and outputs are not ready to be duplicated so we will have to retry some time but not forever
+                        //In my case, when go from Secondary to Extended, my GSync monitor take sarround 5/8 seconds to be ready to init a capture
+                        retryCount++;
+                        var output = adapter.GetOutput(i);
+                        var output1 = output.QueryInterface<IDXGIOutput1>();
+                        _duplications.Add(
+                            i,
+                            new Duplicator(0, i, device, output1)
+                            );
+                        populatedDuplicatorsCount++;
+                        break;
+                    }
+                    catch
+                    {
+                        Thread.Sleep(TimeSpan.FromSeconds(1));
+                        //LOG
+                    }
                 }
             }
             return populatedDuplicatorsCount;

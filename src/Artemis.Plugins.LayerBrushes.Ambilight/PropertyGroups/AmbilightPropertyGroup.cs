@@ -5,10 +5,11 @@ namespace Artemis.Plugins.LayerBrushes.Ambilight.PropertyGroups
 {
     public class AmbilightPropertyGroup : LayerPropertyGroup
     {
-        [PropertyDescription(MinInputValue = 0, InputStepSize = 1, MaxInputValue = 3, DisableKeyframes = true)]
-        public IntLayerProperty Output { get; set; }
+        [PropertyDescription(DisableKeyframes = true)]
+        public EnumLayerProperty<OutputEnum> Output { get; set; }
         protected override void PopulateDefaults()
         {
+            Output.DefaultValue = OutputEnum.Output0;
         }
 
         protected override void EnableProperties()
@@ -18,5 +19,13 @@ namespace Artemis.Plugins.LayerBrushes.Ambilight.PropertyGroups
         protected override void DisableProperties()
         {
         }
+    }
+
+    public enum OutputEnum
+    {
+        Output0 = 0,
+        Output1 = 1,
+        Output2 = 2,
+        Output3 = 3,
     }
 }

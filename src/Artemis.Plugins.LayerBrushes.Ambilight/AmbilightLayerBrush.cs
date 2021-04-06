@@ -14,7 +14,6 @@ namespace Artemis.Plugins.LayerBrushes.Ambilight
     {
 
         private readonly object pixmapLock = new object();
-        private static readonly object AcquireNextFrameLock = new object();
         private SKPixmap pixmap;
         private Duplicator duplicator;
 
@@ -36,7 +35,7 @@ namespace Artemis.Plugins.LayerBrushes.Ambilight
 
         public async Task GetNextFrame()
         {
-            duplicator = DuplicatorFactory.GetDuplicator(Properties.Output.BaseValue);
+            duplicator = DuplicatorFactory.GetDuplicator((int)Properties.Output.BaseValue);
 
             if (duplicator == null)
                 return;
@@ -103,7 +102,7 @@ namespace Artemis.Plugins.LayerBrushes.Ambilight
 
         public override SKColor GetColor(ArtemisLed led, SKPoint renderPoint)
         {
-            if (duplicator == null)
+            if (duplicator == null || pixmap == null)
                 return SKColors.Transparent;
 
             const int sampleSize = 9;
