@@ -17,11 +17,11 @@ namespace Artemis.Plugins.LayerBrushes.Gif
 
         public override void EnableLayerBrush()
         {
-            Properties.FileName.Updated += OnFileNameUpdated;
+            Properties.FileName.PropertyChanged += FileName_PropertyChanged;
             LoadGifData();
         }
 
-        private void OnFileNameUpdated(object sender, Core.LayerPropertyEventArgs e)
+        private void FileName_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             LoadGifData();
         }
@@ -70,7 +70,7 @@ namespace Artemis.Plugins.LayerBrushes.Gif
                     bm?.Dispose();
             }
 
-            Properties.FileName.Updated -= OnFileNameUpdated;
+            Properties.FileName.PropertyChanged -= FileName_PropertyChanged;
         }
 
         public override void Update(double deltaTime)
